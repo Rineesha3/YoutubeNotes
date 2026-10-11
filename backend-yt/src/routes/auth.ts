@@ -50,21 +50,26 @@ authRouter.get('/token', authLimiter, async (req: Request, res: Response) => {
   if (!code) res.status(400).json({ message: 'Authorization code must be provided' })
   else {
     try {
-      const data = {
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        code,
+      const data = new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        code: String(code),
         grant_type: 'authorization_code',
-        redirect_uri: type === "login" ? process.env.REDIRECT_URL_LOGIN : process.env.REDIRECT_URL_SIGNUP,
-      }
+        redirect_uri: type === "login" ? process.env.REDIRECT_URL_LOGIN! : process.env.REDIRECT_URL_SIGNUP!,
+      })
       const response = await fetch('https://oauth2.googleapis.com/token', {
         method: "POST",
-        body: JSON.stringify(data),
+        body: data,
         headers: {
-          "Content-Type": "application/json", // Ensure JSON format is recognized
+          "Content-Type": "application/x-www-form-urlencoded",
         },
       });
       const access_token_data = await response.json();
+      if (!response.ok) {
+        console.error('Google token exchange failed:', access_token_data.error);
+        res.status(400).json({ message: 'Google sign-in failed. Please try again.' });
+        return
+      }
       const id_token = access_token_data.id_token
       if (!id_token) {
         res.status(400).json({ message: 'Auth error' });

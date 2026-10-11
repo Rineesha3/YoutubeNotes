@@ -18,6 +18,7 @@ export default function IndividualPlaylist() {
   const navigate = useNavigate();
   const [playListDetails, setPlayListVideos] = useState<Playlists>();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState(true);
   const [viewMode, setViewMode] = useState<"split" | "theater" | "default">(
     "split"
@@ -60,32 +61,46 @@ export default function IndividualPlaylist() {
     }, [shiftNHandler, shiftPHandler]);
   };
 
-  const fetchVideos = async () => {
+  const fetchVideos = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const res = await axios.get(
         `${import.meta.env.VITE_SERVER_URL
         }/playList/getPlaylistVideos/${playlistId}`,
         { withCredentials: true }
       );
-      setPlayListVideos(
-        (res.data as { playListDetails: Playlists }).playListDetails
-      );
+      const details = (res.data as { playListDetails: Playlists | null }).playListDetails;
+      if (!details) {
+        setLoadError("Playlist not found for this account.");
+        setPlayListVideos(undefined);
+        return;
+      }
+      setPlayListVideos(details);
       localStorage.setItem(
         "playListDetails",
-        JSON.stringify(
-          (res.data as { playListDetails: Playlists }).playListDetails
-        )
+        JSON.stringify(details)
       );
     } catch (error) {
       console.error(error);
+      setPlayListVideos(undefined);
+      if (axios.isAxiosError<{ message?: string }>(error)) {
+        setLoadError(
+          error.response?.status === 401
+            ? "Your session has expired. Please sign in again."
+            : error.response?.data?.message ||
+                "Could not load this playlist. Please try again."
+        );
+      } else {
+        setLoadError("Could not load this playlist. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [playlistId]);
   useEffect(() => {
-    fetchVideos();
-  }, []);
+    void fetchVideos();
+  }, [fetchVideos]);
   const [selectedVideo, setSelectedVideo] = useState<number>(() => {
     if (playListDetails?.playListContent) {
       const idx = playListDetails.playListContent.findIndex(
@@ -140,9 +155,21 @@ export default function IndividualPlaylist() {
     }
   };
 
-  return loading ? (
-    <LoadingScreen />
-  ) : (
+  if (loading) return <LoadingScreen />;
+  if (loadError) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] bg-black flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-zinc-300">{loadError}</p>
+        <button
+          onClick={() => navigate(loadError.includes("session") ? "/auth" : "/home")}
+          className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white"
+        >
+          {loadError.includes("session") ? "Sign in" : "Back to playlists"}
+        </button>
+      </div>
+    );
+  }
+  return (
     <div
       className="bg-black flex overflow-hidden"
       style={{ height: "calc(100vh - 4rem)" }}
@@ -216,7 +243,11 @@ export default function IndividualPlaylist() {
 
         {/* Content Area */}
         <div className="flex-1 overflow-hidden">
-          {selectedVideo >= 0 &&
+          {playListDetails?.playListContent?.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-zinc-400">
+              This playlist has no videos.
+            </div>
+          ) : selectedVideo >= 0 &&
             playListDetails?.playListContent &&
             selectedVideo < playListDetails?.playListContent.length && (
               <div

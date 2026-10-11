@@ -1,5 +1,6 @@
 # NoteTube - Distraction-Free YouTube Learning Platform
 
+**Live app:** [youtubenotesx.onrender.com](https://youtubenotesx.onrender.com/)
 
 https://github.com/user-attachments/assets/419d9045-7106-4b6e-828b-4af8b6963091
 

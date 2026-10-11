@@ -220,13 +220,38 @@ playListRouter.get('/getPlaylists', verifyAuth, async (req, res) => {
 })
 
 playListRouter.get('/getPlaylistVideos/:documentId', verifyAuth, async (req, res) => {
-  const documentId = req.params.documentId
+  const documentId = Number(req.params.documentId)
+  if (!Number.isInteger(documentId) || documentId <= 0) {
+    res.status(400).json({
+      "message": "Invalid playlist ID"
+    })
+    return
+  }
   try {
-    const playListDetails = await prisma.playlist.findUnique({
+    const jwtDetails = jwt.decode(req.cookies.jwt) as UserJwtToken;
+    const userDetails = await prisma.user.findUnique({
       where: {
-        id: Number(documentId)
+        email: jwtDetails.user.email
       }
     })
+    if (!userDetails) {
+      res.status(404).json({
+        "message": "Account not found"
+      })
+      return
+    }
+    const playListDetails = await prisma.playlist.findFirst({
+      where: {
+        id: documentId,
+        userId: userDetails.id
+      }
+    })
+    if (!playListDetails) {
+      res.status(404).json({
+        "message": "Playlist not found for this account"
+      })
+      return
+    }
     res.status(200).json({
       "playListDetails": playListDetails
     })

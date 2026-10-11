@@ -296,12 +296,21 @@ export const IndividualVideoCard = React.forwardRef<
         aria-selected={isSelected}
       >
         <div className="relative flex-shrink-0">
-          <img
-            src={video.thumbnail.url}
-            className="rounded-lg object-cover w-28 h-16 border border-zinc-800"
-            alt={`Thumbnail for ${video.title}`}
-            loading="lazy"
-          />
+          {video.thumbnail?.url ? (
+            <img
+              src={video.thumbnail.url}
+              className="rounded-lg object-cover w-28 h-16 border border-zinc-800"
+              alt={`Thumbnail for ${video.title}`}
+              loading="lazy"
+            />
+          ) : (
+            <div
+              className="rounded-lg w-28 h-16 border border-zinc-800 bg-zinc-900 flex items-center justify-center"
+              aria-label={`No thumbnail available for ${video.title}`}
+            >
+              <PlayCircle className="w-6 h-6 text-zinc-600" />
+            </div>
+          )}
           {isSelected && (
             <div className="absolute inset-0 bg-red-600/20 rounded-lg border-2 border-red-600" />
           )}
